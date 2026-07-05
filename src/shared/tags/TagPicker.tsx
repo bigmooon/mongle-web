@@ -1,7 +1,7 @@
 import { useState } from "react";
-import type { TagItem } from "../../tags/types.js";
 import { TagChip } from "./TagChip.js";
 import { TagEditorForm } from "./TagEditorForm.js";
+import type { TagItem } from "./types.js";
 import "./TagPicker.css";
 
 const DEFAULT_COLOR = "#8478C0";

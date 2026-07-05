@@ -1,7 +1,7 @@
 import { motion } from "motion/react";
 import type { ReactNode } from "react";
+import { Tag } from "../../shared/tags/Tag.js";
 import { DeleteConfirmDialog } from "../../shared/ui/DeleteConfirmDialog.js";
-import { Tag } from "../../shared/ui/Tag/Tag.js";
 import type { CalHook } from "./CalendarCore.js";
 import { Check } from "./CalendarCore.js";
 import { type CalEvent, serial, WD } from "./calEngine.js";

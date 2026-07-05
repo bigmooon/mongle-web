@@ -1,5 +1,5 @@
-import type { TagItem } from "../../tags/types.js";
-import { DeleteConfirmDialog } from "../DeleteConfirmDialog.js";
+import { DeleteConfirmDialog } from "../ui/DeleteConfirmDialog.js";
+import type { TagItem } from "./types.js";
 import "./TagChip.css";
 
 type Props = {

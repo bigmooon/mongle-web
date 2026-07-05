@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { TagPicker } from "../../shared/tags/TagPicker.js";
 import type { TagItem } from "../../shared/tags/types.js";
-import { TagPicker } from "../../shared/ui/tags/TagPicker.js";
 import { toYMDStr } from "./calEngine.js";
 import { DateRangePicker } from "./DateRangePicker.js";
 import { SingleDatePicker } from "./SingleDatePicker.js";

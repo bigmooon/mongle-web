@@ -1,4 +1,4 @@
-import { readableInk } from "../../shared/ui/Tag/Tag.js";
+import { readableInk } from "../../shared/tags/Tag.js";
 import type { BarSeg } from "./calEngine.js";
 
 type Props = {
