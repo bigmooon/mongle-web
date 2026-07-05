@@ -1,8 +1,8 @@
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { readableInk } from "../../shared/tags/Tag.js";
+import { TagPicker } from "../../shared/tags/TagPicker.js";
 import { useTags } from "../../shared/tags/useTags.js";
-import { readableInk } from "../../shared/ui/Tag/Tag.js";
-import { TagPicker } from "../../shared/ui/tags/TagPicker.js";
 import "./todoCreation.css";
 import { confirmTodos, createTodo, formatTodayIso, generateTodos } from "./todoApi.js";
 

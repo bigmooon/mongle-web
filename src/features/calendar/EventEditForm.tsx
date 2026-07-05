@@ -1,7 +1,7 @@
 import { motion } from "motion/react";
 import { useId, useState } from "react";
+import { TagPicker } from "../../shared/tags/TagPicker.js";
 import type { TagItem } from "../../shared/tags/types.js";
-import { TagPicker } from "../../shared/ui/tags/TagPicker.js";
 import type { CalEvent } from "./calEngine.js";
 import { serialToYMDStr } from "./calEngine.js";
 import { DateRangePicker } from "./DateRangePicker.js";

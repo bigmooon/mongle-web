@@ -1,7 +1,7 @@
 import { motion } from "motion/react";
 import { useState } from "react";
+import { Tag } from "../../shared/tags/Tag.js";
 import { DeleteConfirmDialog } from "../../shared/ui/DeleteConfirmDialog.js";
-import { Tag } from "../../shared/ui/Tag/Tag.js";
 import { Check } from "./CalendarCore.js";
 import type { CalEvent } from "./calEngine.js";
 import { canExtendTodo, serialToMD } from "./calEngine.js";
