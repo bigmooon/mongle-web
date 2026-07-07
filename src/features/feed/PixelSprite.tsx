@@ -102,4 +102,3 @@ export const SPRITES = {
 };
 
 export const APPLE_PAL = { r: "#E0533B", d: "#B23A2A", h: "#FF9B82", s: "#7A4A2A", l: "#5BA45A" };
-export const SPARK_PAL = { y: "#FFCB45", h: "#FFF0BE" };
