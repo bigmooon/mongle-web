@@ -2,6 +2,8 @@
 
 Build and maintain a cozy pixel village focus/todo game MVP. The web app is a React/Vite application with a Phaser-rendered Tiled map background.
 
+크로스레포(웹↔서버↔AI) API 계약·ADR은 `../docs/` 참조 — 진입점 `../CLAUDE.md`.
+
 ## Commands
 
 ```bash
