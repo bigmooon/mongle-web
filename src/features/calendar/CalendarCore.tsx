@@ -156,35 +156,3 @@ export function Check({
     </button>
   );
 }
-
-export function CatChip({
-  catKey,
-  active,
-  onClick,
-}: {
-  catKey: CatKey;
-  active: boolean;
-  onClick: () => void;
-}) {
-  const c = CATS[catKey];
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        padding: "7px 13px",
-        borderRadius: 999,
-        cursor: "pointer",
-        fontFamily: "var(--font-display)",
-        fontSize: 14,
-        whiteSpace: "nowrap",
-        border: active ? `2px solid ${c.color}` : "2px solid var(--line-soft)",
-        background: active ? c.bg : "var(--cream-0)",
-        color: active ? c.color : "var(--ink-3)",
-        transition: "all .14s",
-      }}
-    >
-      #{c.label}
-    </button>
-  );
-}
