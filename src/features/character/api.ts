@@ -73,6 +73,10 @@ type CharacterListResponse = {
 const ALLOWED_CONTENT_TYPES = new Set(["image/jpeg", "image/png"]);
 const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 6 * 60 * 1000;
+const STATUS_REQUEST_TIMEOUT_MS = 15_000;
+const MAX_CONSECUTIVE_ERRORS = 3;
+// One observer per job in this JS context. Other tabs remain independent.
+const activePolls = new Map<string, AbortController>();
 
 // 백엔드가 내려주는 error 코드를 사용자 친화적 한국어 메시지로 변환한다.
 const ERROR_MESSAGES: Record<string, string> = {
@@ -89,8 +93,32 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 const FALLBACK_MESSAGE = "새 친구를 마을에 데려오지 못했어요. 잠시 후 다시 시도해 주세요.";
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function abortError(): DOMException {
+  return new DOMException("generation observation cancelled", "AbortError");
+}
+
+function delay(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const onAbort = () => {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", onAbort);
+      reject(abortError());
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal.addEventListener("abort", onAbort, { once: true });
+    if (signal.aborted) onAbort();
+  });
+}
+
+function isTransientStatusError(error: unknown): boolean {
+  return (
+    axios.isAxiosError(error) &&
+    !axios.isCancel(error) &&
+    (!error.response || error.response.status >= 500)
+  );
 }
 
 // 일일 생성 한도는 서버 기준 로컬 자정(0시)에 리셋된다. 리셋까지 남은 분을 계산한다.
@@ -163,32 +191,58 @@ type PollResult = {
 };
 
 async function pollJob(jobId: string, signal?: AbortSignal): Promise<PollResult> {
-  const deadline = Date.now() + POLL_TIMEOUT_MS;
-
-  while (Date.now() < deadline) {
-    // 사용자가 생성을 취소했으면 폴링을 멈춘다(서버 취소·환불은 별도 호출).
-    if (signal?.aborted) {
-      return { outcome: "CANCELLED", result: null };
-    }
-    const { data } = await apiClient.get<JobStatusResponse>(
-      `/characters/generation-jobs/${jobId}/`,
-    );
-
-    if (data.status === "SUCCEEDED") {
-      return { outcome: "SUCCEEDED", result: data.result };
-    }
-    if (data.status === "FAILED") {
-      return { outcome: "FAILED", result: null };
-    }
-    if (data.status === "CONSUMED") {
-      // 이미 캐릭터로 등록된 잡 — 더 할 일 없음.
-      return { outcome: "CONSUMED", result: null };
-    }
-
-    await delay(POLL_INTERVAL_MS);
+  if (signal?.aborted) return { outcome: "CANCELLED", result: null };
+  if (activePolls.has(jobId) && !activePolls.get(jobId)?.signal.aborted) {
+    throw new Error("이미 이 친구의 생성 상태를 확인하고 있어요.");
   }
-
-  return { outcome: "TIMEOUT", result: null };
+  const controller = new AbortController();
+  activePolls.set(jobId, controller);
+  const cancel = () => controller.abort();
+  signal?.addEventListener("abort", cancel, { once: true });
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, POLL_TIMEOUT_MS);
+  let consecutiveErrors = 0;
+  try {
+    while (!controller.signal.aborted) {
+      let data: JobStatusResponse;
+      try {
+        ({ data } = await apiClient.get<JobStatusResponse>(
+          `/characters/generation-jobs/${jobId}/`,
+          { signal: controller.signal, timeout: STATUS_REQUEST_TIMEOUT_MS },
+        ));
+        consecutiveErrors = 0;
+      } catch (error) {
+        if (controller.signal.aborted) throw error;
+        if (!isTransientStatusError(error) || ++consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+          throw error;
+        }
+        await delay(POLL_INTERVAL_MS, controller.signal);
+        continue;
+      }
+      if (controller.signal.aborted) break;
+      if (data.status === "SUCCEEDED") {
+        if (!data.result?.gen_img_url) throw new Error("생성 결과를 확인하지 못했어요.");
+        return { outcome: "SUCCEEDED", result: data.result };
+      }
+      if (data.status === "FAILED" || data.status === "CONSUMED") {
+        return { outcome: data.status, result: null };
+      }
+      if (data.status !== "QUEUED" && data.status !== "IN_PROGRESS") {
+        throw new Error("알 수 없는 생성 상태예요. 잠시 후 다시 확인해 주세요.");
+      }
+      await delay(POLL_INTERVAL_MS, controller.signal);
+    }
+  } catch (error) {
+    if (!controller.signal.aborted) throw error;
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener("abort", cancel);
+    if (activePolls.get(jobId) === controller) activePolls.delete(jobId);
+  }
+  return { outcome: timedOut ? "TIMEOUT" : "CANCELLED", result: null };
 }
 
 // 4단계: SUCCEEDED 잡을 캐릭터로 등록(입주)하고, 영속화된 진행 상태를 비운다.
@@ -202,7 +256,7 @@ export async function registerCharacter(
     name,
     persona,
   });
-  clearPendingJob();
+  clearPendingJob(jobId);
   return {
     characterId: character.character_id,
     name: character.name,
@@ -232,8 +286,10 @@ export async function generateCharacterPreview(
   const { name, persona, personalityKeywords, sourceImageFile } = params;
 
   try {
+    if (options?.signal?.aborted) throw abortError();
     const sourceImgId = sourceImageFile ? await uploadSourceImage(sourceImageFile) : null;
 
+    if (options?.signal?.aborted) throw abortError();
     const { data: job } = await apiClient.post<JobCreateResponse>("/characters/generation-jobs/", {
       name,
       persona,
@@ -242,18 +298,17 @@ export async function generateCharacterPreview(
     });
 
     // 잡 생성 직후 job_id 를 호출부에 알려, 취소 버튼이 이 잡을 대상으로 취소할 수 있게 한다.
-    options?.onJobCreated?.(job.job_id);
     // 잡이 큐에 들어간 직후 영속화한다. 이 시점부터는 새로고침해도 재개 가능.
     savePendingJob({ jobId: job.job_id, name, persona });
+    options?.onJobCreated?.(job.job_id);
 
     const { outcome, result } = await pollJob(job.job_id, options?.signal);
     if (outcome === "CANCELLED") {
-      // 사용자가 취소함 — 재개되지 않도록 진행 상태를 비우고 AbortError 로 알린다.
-      clearPendingJob();
-      throw new DOMException("generation cancelled", "AbortError");
+      // Observation cleanup is not server cancellation; retain recovery data.
+      throw abortError();
     }
     if (outcome === "FAILED") {
-      clearPendingJob();
+      clearPendingJob(job.job_id);
       throw new Error("친구 그림을 그리는 데 실패했어요. 잠시 후 다시 시도해 주세요.");
     }
     if (outcome === "TIMEOUT") {
@@ -263,9 +318,11 @@ export async function generateCharacterPreview(
       );
     }
 
-    // 미리보기가 준비됐으니, 새로고침 재개(resume)로 자동 등록되지 않도록 진행 상태를 비운다.
-    // 실제 등록은 "입주하기"에서만 한다.
-    clearPendingJob();
+    if (outcome === "CONSUMED") {
+      clearPendingJob(job.job_id);
+      throw new Error("이미 마을에 들어온 친구예요.");
+    }
+    // Keep the preview recoverable until explicit registration.
     return {
       jobId: job.job_id,
       name,
@@ -294,49 +351,38 @@ export async function cancelGenerationJob(jobId: string): Promise<void> {
   }
 }
 
-/**
- * 새로고침/이탈로 중단됐던 생성 잡을 이어서 마무리한다.
- * - 진행 중 잡이 없으면 null.
- * - 이미 등록(CONSUMED)됐으면 진행 상태만 비우고 null(목록 새로고침이 보여줌).
- * - SUCCEEDED 면 등록해 캐릭터를 반환.
- * - FAILED/등록 거부 등 회복 불가면 진행 상태를 비우고 친화적 메시지로 throw.
- * - TIMEOUT(아직 생성 중)이면 진행 상태를 남겨두고 throw(다음에 또 재개).
- */
-export async function resumePendingCharacter(): Promise<GeneratedCharacter | null> {
+/** Resume observation and return the preview; registration always requires confirmation. */
+export async function resumePendingCharacter(
+  signal?: AbortSignal,
+): Promise<CharacterPreview | null> {
   const pending = loadPendingJob();
-  if (!pending) {
-    return null;
-  }
-
-  let outcome: JobOutcome;
+  if (!pending) return null;
+  let polled: PollResult;
   try {
-    outcome = (await pollJob(pending.jobId)).outcome;
+    polled = await pollJob(pending.jobId, signal);
   } catch (error) {
-    // 잡 조회 자체가 404(NOT_FOUND) 등으로 실패하면 더 살릴 수 없음.
-    clearPendingJob();
+    // Transport/auth failures do not prove the backend job failed or disappeared.
+    if (axios.isAxiosError(error) && error.response?.status === 404) clearPendingJob(pending.jobId);
     throw new Error(toFriendlyMessage(error));
   }
-
-  if (outcome === "CONSUMED") {
-    clearPendingJob();
+  if (polled.outcome === "CANCELLED") throw abortError();
+  if (polled.outcome === "CONSUMED") {
+    clearPendingJob(pending.jobId);
     return null;
   }
-  if (outcome === "FAILED") {
-    clearPendingJob();
+  if (polled.outcome === "FAILED") {
+    clearPendingJob(pending.jobId);
     throw new Error("이전에 만들던 친구를 완성하지 못했어요. 다시 시도해 주세요.");
   }
-  if (outcome === "TIMEOUT") {
-    // 아직 생성 중 — 진행 상태 유지, 다음 진입 때 재개.
+  if (polled.outcome === "TIMEOUT") {
     throw new Error("이전에 만들던 친구를 아직 그리는 중이에요. 잠시 후 다시 확인해 주세요.");
   }
-
-  try {
-    return await registerCharacter(pending.jobId, pending.name, pending.persona);
-  } catch (error) {
-    // 한도 초과/이미 소비/잡 없음 등 — 무한 재시도를 막기 위해 진행 상태를 비운다.
-    clearPendingJob();
-    throw new Error(toFriendlyMessage(error));
-  }
+  return {
+    jobId: pending.jobId,
+    name: pending.name,
+    genImgUrl: polled.result?.gen_img_url ?? "",
+    persona: polled.result?.persona ?? pending.persona,
+  };
 }
 
 export type GenerationQuota = { used: number; limit: number };

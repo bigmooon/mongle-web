@@ -11,7 +11,7 @@ import {
   registerCharacter,
   resumePendingCharacter,
 } from "../features/character/api.js";
-import { hasPendingJob } from "../features/character/pendingJob.js";
+import { clearPendingJob, loadPendingJob } from "../features/character/pendingJob.js";
 import { fetchNotifications, markNotificationRead } from "../features/notification/api.js";
 import { NotificationPanel } from "../features/notification/NotificationPanel.js";
 import { NotificationToastLayer } from "../features/notification/NotificationToast.js";
@@ -156,10 +156,9 @@ export function App() {
   const [lastCreatedResident, setLastCreatedResident] = useState<Resident | null>(null);
   // 생성됐지만 아직 입주(등록)하지 않은 미리보기 잡. "입주하기" 시 이 잡을 등록한다.
   const [previewJobId, setPreviewJobId] = useState<string | null>(null);
-  // 생성 취소용: 현재 생성의 폴링 중단 컨트롤러 / 취소 대상 job_id / 취소 여부 플래그.
+  // 생성 취소용: 현재 생성의 폴링 중단 컨트롤러 / 취소 대상 job_id.
   const genAbortRef = useRef<AbortController | null>(null);
   const genJobIdRef = useRef<string | null>(null);
-  const genCancelledRef = useRef(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const pushToast = useNotificationStore((s) => s.pushToast);
   const notifHistory = useNotificationStore((s) => s.history);
@@ -588,58 +587,62 @@ export function App() {
     });
   }, [guardFeatureAccess]);
 
-  // 새로고침/이탈로 중단됐던 생성 잡을 로그인 후 한 번 이어서 마무리한다.
-  const resumedRef = useRef(false);
+  // Stop observation on unmount/account change, preserving the backend job for recovery.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: authentication identity owns this observation lifetime
   useEffect(() => {
-    if (authStatus !== "authenticated") {
-      resumedRef.current = false;
-      return;
-    }
-    if (resumedRef.current) {
-      return;
-    }
-    resumedRef.current = true;
-    if (!hasPendingJob()) {
-      return;
-    }
+    setIsBusy(false);
+    return () => {
+      genAbortRef.current?.abort();
+      genAbortRef.current = null;
+      genJobIdRef.current = null;
+    };
+  }, [authStatus, authUserId]);
 
-    let cancelled = false;
+  // Restore the same preview after refresh; never register without confirmation.
+  useEffect(() => {
+    if (authStatus !== "authenticated" || !authUserId || genAbortRef.current) return;
+    const pending = loadPendingJob();
+    if (!pending) return;
+    const controller = new AbortController();
+    genAbortRef.current = controller;
+    genJobIdRef.current = pending.jobId;
+    setCharacterName(pending.name);
+    setCharacterPersona(pending.persona);
+    setActiveFeature("character");
     setIsBusy(true);
     showNotice("이전에 만들던 주민을 마무리하는 중이에요…");
     void (async () => {
       try {
-        const result = await resumePendingCharacter();
-        if (cancelled || !result) {
-          return;
-        }
-        const resident: Resident = {
-          id: result.characterId,
-          name: result.name,
-          personality: "",
+        const preview = await resumePendingCharacter(controller.signal);
+        if (controller.signal.aborted || genAbortRef.current !== controller || !preview) return;
+        setPreviewJobId(preview.jobId);
+        setLastCreatedResident({
+          id: preview.jobId,
+          name: preview.name,
+          personality: preview.persona,
           speechStyle: "",
-          avatarUrl: resolveAvatarUrl(result.genImgUrl),
-        };
-        setResidents((current) => [...current, resident].slice(0, 10));
-        showNotice(`${resident.name} 주민이 몽글마을에 들어왔어요.`);
-        setVillageVersion((current) => current + 1);
-        useAuthStore.setState((state) => ({
-          user: state.user ? { ...state.user, hasCharacter: true } : null,
-        }));
+          avatarUrl: resolveAvatarUrl(preview.genImgUrl),
+        });
       } catch (error) {
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           showNotice(error instanceof Error ? error.message : "이전 작업을 마무리하지 못했어요.");
         }
       } finally {
-        if (!cancelled) {
+        if (genAbortRef.current === controller) {
+          genAbortRef.current = null;
+          genJobIdRef.current = null;
           setIsBusy(false);
         }
       }
     })();
-
     return () => {
-      cancelled = true;
+      controller.abort();
+      if (genAbortRef.current === controller) {
+        genAbortRef.current = null;
+        genJobIdRef.current = null;
+      }
     };
-  }, [authStatus, showNotice]);
+  }, [authStatus, authUserId, showNotice]);
 
   // 생성 중 새로고침/탭 종료 시 브라우저 기본 경고를 띄운다.
   useEffect(() => {
@@ -697,6 +700,7 @@ export function App() {
   }
 
   async function createCharacter() {
+    if (genAbortRef.current || isBusy) return;
     const name = characterName.trim();
     const persona = characterPersona.trim();
     if (!name || !persona) {
@@ -705,7 +709,6 @@ export function App() {
     }
     const keywords = selectedKeywordCategories.slice(0, 3);
     setIsBusy(true);
-    genCancelledRef.current = false;
     const controller = new AbortController();
     genAbortRef.current = controller;
     genJobIdRef.current = null;
@@ -721,10 +724,19 @@ export function App() {
         {
           signal: controller.signal,
           onJobCreated: (jobId) => {
-            genJobIdRef.current = jobId;
+            if (controller.signal.aborted) {
+              // The submit response can arrive after explicit cancellation.
+              if (controller.signal.reason === "user") {
+                clearPendingJob(jobId);
+                void cancelGenerationJob(jobId);
+              }
+              return;
+            }
+            if (genAbortRef.current === controller) genJobIdRef.current = jobId;
           },
         },
       );
+      if (controller.signal.aborted || genAbortRef.current !== controller) return;
       // 미리보기만 표시하고 아직 등록하지 않는다. 등록(입주)은 confirmCharacter 에서.
       // 재생성하면 이 미리보기가 새 잡으로 교체될 뿐, 이전 잡은 등록된 적이 없어 고아가 안 생긴다.
       // 원본 사진·이름·키워드·설명을 모두 남겨, 재생성 시 같은 사진으로 다시 그릴 수 있게 한다.
@@ -740,15 +752,17 @@ export function App() {
     } catch (error) {
       // 사용자가 취소한 경우(AbortError)엔 에러 메시지를 띄우지 않는다.
       const isCancelled =
-        genCancelledRef.current || (error instanceof DOMException && error.name === "AbortError");
+        controller.signal.aborted || (error instanceof DOMException && error.name === "AbortError");
       if (!isCancelled) {
         const message = error instanceof Error ? error.message : "원인 미상";
         showNotice(message);
       }
     } finally {
-      setIsBusy(false);
-      genAbortRef.current = null;
-      genJobIdRef.current = null;
+      if (genAbortRef.current === controller) {
+        setIsBusy(false);
+        genAbortRef.current = null;
+        genJobIdRef.current = null;
+      }
     }
   }
 
@@ -756,12 +770,12 @@ export function App() {
   // 서버는 결과를 폐기하고 차감했던 일일 생성 횟수를 즉시 환불한다(취소 뷰에서 동기 처리).
   // 호출부가 환불 완료 후 quota 를 갱신할 수 있도록 서버 취소 요청을 await 한다.
   async function cancelCharacterGeneration() {
-    genCancelledRef.current = true;
-    genAbortRef.current?.abort();
+    genAbortRef.current?.abort("user");
     setIsBusy(false);
     showNotice("생성을 취소했어요. 생성 횟수는 차감되지 않아요.");
     const jobId = genJobIdRef.current;
     if (jobId) {
+      clearPendingJob(jobId);
       await cancelGenerationJob(jobId);
     }
   }

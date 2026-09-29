@@ -1,6 +1,6 @@
 // 진행 중인 캐릭터 생성 Job 을 브라우저에 영속화한다.
 // 새로고침/탭 종료로 폴링이 끊겨도, 다음 진입 시 job_id 로 폴링을 재개해
-// SUCCEEDED 된 Job 을 캐릭터로 등록(회수)할 수 있게 한다.
+// SUCCEEDED 된 Job 의 미리보기를 복원하고 사용자가 등록을 확인할 수 있게 한다.
 // localStorage 를 쓰는 이유: 같은 탭 새로고침뿐 아니라 탭을 닫았다 다시 열어도 복구.
 
 const STORAGE_KEY = "mongle:pendingCharacterJob";
@@ -43,7 +43,8 @@ export function loadPendingJob(): PendingCharacterJob | null {
   }
 }
 
-export function clearPendingJob(): void {
+export function clearPendingJob(jobId?: string): void {
+  if (jobId && loadPendingJob()?.jobId !== jobId) return;
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch {
