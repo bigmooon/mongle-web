@@ -36,4 +36,11 @@ describe("pendingJob 저장소", () => {
     localStorage.setItem("mongle:pendingCharacterJob", JSON.stringify({ jobId: "job-1" }));
     expect(loadPendingJob()).toBeNull();
   });
+  it("an older job cannot clear a newer pending job", () => {
+    savePendingJob(SAMPLE);
+    clearPendingJob("old-job");
+    expect(loadPendingJob()).toEqual(SAMPLE);
+    clearPendingJob(SAMPLE.jobId);
+    expect(loadPendingJob()).toBeNull();
+  });
 });
