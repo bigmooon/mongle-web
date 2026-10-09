@@ -5,6 +5,7 @@
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Phaser](https://img.shields.io/badge/Phaser-3.90-8A2BE2)](https://phaser.io/)
+[![CI](https://github.com/bigmooon/mongle-web/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bigmooon/mongle-web/actions/workflows/ci.yml)
 
 <p align="center">
   <img src="public/assets/tutorial/village.png" alt="몽글마을 메인 화면" width="88%" />
