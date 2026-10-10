@@ -31,6 +31,17 @@
 | Server | [mongle-server](https://github.com/bigmooon/mongle-server) |
 | AI | [mongle-ai](https://github.com/bigmooon/mongle-ai) |
 
+## 관련 설계 문서
+
+| 문서 | 확인할 수 있는 내용 |
+| --- | --- |
+| [화면 설계서](https://drive.google.com/file/d/1YtJOZGWTRox2bAD4ejiBRfHChII9syMF/view) | 주요 화면, 사용자 동선과 UI 구성 |
+| [시나리오 설계서](https://drive.google.com/file/d/1iEBtXu_PdO8v77O-_BnPvVMfbw2PgwJB/view) | 핵심 사용 시나리오와 기능 흐름 |
+| [요구사항 정의서](https://drive.google.com/file/d/1ineMQiAB7cdMCnDCzvfNJTvKYgrsaKHC/view) | 기능·비기능 요구사항 |
+| [시스템 아키텍처](https://drive.google.com/file/d/15p49ZUIrJCmrSCy3LpU3FbjapZaMXdRc/view) | Web·Server·AI 간 구성과 배포 경계 |
+
+[전체 프로젝트 산출물 보기](https://drive.google.com/drive/folders/1Lfv49TDbilo4ivoSIpw4v8RDEnEw9quC)
+
 ## 주요 사용자 경험
 
 1. 이메일 또는 카카오 계정으로 로그인합니다.
