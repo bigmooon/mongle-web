@@ -31,10 +31,21 @@
 | Server | [mongle-server](https://github.com/bigmooon/mongle-server) |
 | AI | [mongle-ai](https://github.com/bigmooon/mongle-ai) |
 
+## 문제 정의와 리서치 근거
+
+기획 단계에서 수집한 외부 조사 결과를 제품 가설과 화면 경험으로 연결했습니다. 아래 수치는 자체 설문 결과가 아니라 [`프로젝트 기획서`](https://drive.google.com/file/d/1AT0YGK2BfbWJpBcsvgHfugAlRHEdQTak/view)에 정리한 선행 자료입니다.
+
+| 관찰한 문제 | 조사 결과 | Web 경험에 반영한 방식 |
+| --- | --- | --- |
+| 시작 자체가 어렵다 | 귀찮음 **25.8%**, 무엇을 할지 모름 **24.4%**, 시간 부족 **21.7%** | 한 문장 입력과 대화형 플래너로 계획 시작 단계를 단축 |
+| 생산성 앱을 오래 쓰기 어렵다 | 생산성 앱 리텐션: 1일 **32.86% → 30일 9.63%** | TODO를 캐릭터 퀘스트·보상·피드로 시각화 |
+| 루틴을 돕는 디지털 수요가 있다 | 챌린지·습관 앱 이용 **21.3%** | 캘린더·포모도로·회고를 하나의 마을 경험으로 연결 |
+
 ## 관련 설계 문서
 
 | 문서 | 확인할 수 있는 내용 |
 | --- | --- |
+| [프로젝트 기획서](https://drive.google.com/file/d/1AT0YGK2BfbWJpBcsvgHfugAlRHEdQTak/view) | 문제 정의, 시장·사용자 리서치와 제품 가설 |
 | [화면 설계서](https://drive.google.com/file/d/1YtJOZGWTRox2bAD4ejiBRfHChII9syMF/view) | 주요 화면, 사용자 동선과 UI 구성 |
 | [시나리오 설계서](https://drive.google.com/file/d/1iEBtXu_PdO8v77O-_BnPvVMfbw2PgwJB/view) | 핵심 사용 시나리오와 기능 흐름 |
 | [요구사항 정의서](https://drive.google.com/file/d/1ineMQiAB7cdMCnDCzvfNJTvKYgrsaKHC/view) | 기능·비기능 요구사항 |
@@ -43,6 +54,15 @@
 [전체 프로젝트 산출물 보기](https://drive.google.com/drive/folders/1Lfv49TDbilo4ivoSIpw4v8RDEnEw9quC)
 
 ## 주요 사용자 경험
+
+```mermaid
+flowchart TB
+    ONBOARD["온보딩<br/>로그인 → AI 주민 생성"]
+    PLAN["계획과 실행<br/>목표 → TODO·캘린더 → 퀘스트"]
+    REFLECT["보상과 회고<br/>AI 피드 → 포모도로 → 일일 회고"]
+
+    ONBOARD --> PLAN --> REFLECT
+```
 
 1. 이메일 또는 카카오 계정으로 로그인합니다.
 2. 애착 인형 사진과 키워드로 AI 주민을 생성합니다.
