@@ -18,12 +18,13 @@
 
 ## 프로젝트 개요
 
-몽글마을은 사용자의 애착 인형을 AI 주민으로 만들고, 자연어로 입력한 목표를 TODO와 캐릭터 퀘스트로 구체화하는 서비스입니다. Web은 React 인터페이스와 Phaser 마을을 하나의 화면에 결합하고, 시간이 오래 걸리는 AI 생성 작업을 사용자가 안전하게 이어갈 수 있도록 관리합니다.
+**내일도와줘, 몽글마을**은 꾸준한 기록과 루틴 관리를 원하는 사용자를 위해, **자기관리 기능과 애착 인형 기반의 정서적 연결을 결합한 서비스**입니다. 20\~30대 여성을 핵심 기획 대상으로 삼아 생산성 앱과 성인 키덜트 시장이 만나는 틈새를 겨냥했습니다. 나의 애착 인형을 픽셀 마을의 AI 주민으로 만들고, 자연어로 이야기한 목표를 실행할 TODO로 구체화합니다.
 
-- React가 로그인, TODO, 캘린더, 피드, 회고 등 제품 UI를 담당합니다.
-- Phaser가 Tiled 기반의 픽셀 마을 배경을 렌더링합니다.
-- Zustand가 인증과 알림 등 클라이언트 상태를 관리합니다.
-- Django API와 AI 비동기 작업 상태를 연결합니다.
+사용자는 계획을 확인하고 저장한 뒤, 자신의 할 일과 연결된 주민의 퀘스트를 함께 수행합니다. 퀘스트와 연결된 TODO를 완료하면 사과 토큰을 받고, 주민의 이미지·글이 담긴 개인 피드가 생성됩니다. 여기에 캘린더, 집중을 돕는 포모도로, 하루를 돌아보는 회고를 더해 **계획 → 실천 → 성취 기록**을 하나의 마을에서 경험하도록 구성했습니다.
+
+몽글마을은 나만의 캐릭터와 작은 실천을 쌓으며 다시 찾아오고 싶은 자기관리 경험을 목표로 합니다. 대상 사용자와 제품의 출발점은 [프로젝트 기획서의 「핵심 목표·주요 고객」](https://drive.google.com/file/d/1AT0YGK2BfbWJpBcsvgHfugAlRHEdQTak/view)에 정리되어 있습니다.
+
+Web은 이 경험을 React 인터페이스와 Phaser 마을 화면으로 구현합니다. 로그인, TODO, 캘린더, 피드, 회고는 React가 담당하고, Tiled 기반 픽셀 마을은 Phaser가 렌더링합니다. Zustand로 인증·알림 상태를 관리하며, Django API를 통해 AI 생성 결과를 받아 표시하고 캐릭터 생성 중 새로고침이 발생했을 때 작업 조회를 이어갑니다.
 
 | 영역 | 저장소 |
 | --- | --- |
@@ -33,13 +34,64 @@
 
 ## 문제 정의와 리서치 근거
 
-기획 단계에서 수집한 외부 조사 결과를 제품 가설과 화면 경험으로 연결했습니다. 아래 수치는 자체 설문 결과가 아니라 [`프로젝트 기획서`](https://drive.google.com/file/d/1AT0YGK2BfbWJpBcsvgHfugAlRHEdQTak/view)에 정리한 선행 자료입니다.
+### 1. 계획을 세우는 데서, 기록과 루틴을 이어가는 수요로
+
+자기관리는 일상적인 관심사가 되었습니다. 잡플래닛이 2024년 발표한 설문에서는 **직장인 응답자의 71.2%, 약 10명 중 7명**이 자기개발을 하고 있다고 답했습니다. 전체 응답자는 직장인·휴직/구직자·대학생 등 323명이며, 직장인 수치는 그중 직장인 그룹의 응답입니다. [잡플래닛 조사](https://www.jobplanet.co.kr/contents/news-6416)
+
+기획 발표 자료에서는 Better, Notein, To-Do List, 마이루틴 등 기록·루틴 앱을 최근 1년 성장률 상위 사례로 제시했습니다. 팀은 이 흐름에서 **사용자가 계획을 작성하는 기능에 더해, 꾸준히 기록하고 루틴을 관리할 경험을 찾고 있다**는 기회를 읽었습니다. 성장률의 상세 수치와 원자료 확인 범위는 [시장조사 출처 기록](docs/MARKET_RESEARCH.md)에 정리했습니다.
+
+### 2. 핵심 기획 대상: 자기관리에 관심 있는 20\~30대 여성
+
+코리안클릭의 2023.05\~2024.04 자료를 인용한 보도에서 스케줄 관리 앱 이용자는 **여성 55.8%**, 연령별로는 **30대 27.7%·20대 27.3%**였습니다. 팀은 여성 이용자가 더 많고 20\~30대가 합계 55.0%를 차지한다는 점에 주목해, 기록과 루틴 관리에 관심 있는 **20\~30대 여성을 핵심 기획 대상**으로 삼았습니다. 성별·연령별 비율은 각각의 분포이며, ‘20\~30대 여성의 비율이 55.0%’라는 뜻은 아닙니다. [이용자 구성 조사](https://www.banronbodo.com/news/articleView.html?idxno=22900)
+
+### 3. 수요는 있지만, 꾸준히 돌아오기는 어렵다
+
+높은 관심이 지속적인 사용을 보장하지는 않습니다. OneSignal의 **2024년 생산성 앱 벤치마크**에서는 **1일 리텐션 32.86%, 30일 리텐션 9.63%** 수준으로 나타났습니다. 몽글마을은 이 간극을 ‘계획을 세우게 하는 것만으로는 작심삼일을 넘기 어렵다’는 문제로 받아들였습니다. [OneSignal 벤치마크](https://onesignal.com/mobile-app-benchmarks-2024)
+
+팀은 특히 **완료 경험이 체크 표시에서 끝나면 → 서비스에 정서적 애착을 쌓기 어렵고 → 다시 방문해 루틴을 이어갈 동기가 약해질 수 있다**고 보았습니다. 이는 리텐션 통계에서 직접 입증된 원인이 아니라, 몽글마을이 제품으로 검증하려는 문제 가설입니다. 그래서 ‘할 일을 잘 관리하는가’와 함께 ‘이 공간에 다시 오고 싶은가’를 설계 기준으로 삼았습니다.
+
+![수요 증가, 핵심 이용자층, 지속률의 한계, 이탈 원인 가설, 몽글마을의 기획 방향을 연결한 흐름](docs/images/product-concept.svg)
+
+### 4. 경쟁 서비스를 세 가지 접근으로 비교
+
+기획 과정에서는 비교 대상을 **일정 관리·개인화·게이미피케이션**으로 나눴습니다. 아래 구분은 발표 자료의 비교 관점이며, 각 서비스의 전체 기능을 배타적으로 분류하거나 성능 순위를 매긴 것은 아닙니다.
+
+| 접근 | 비교한 서비스 | 팀이 주목한 경험 |
+| --- | --- | --- |
+| 일정 관리 | Todoist · TickTick · Microsoft To Do | 할 일, 마감일, 반복 일정을 체크리스트로 관리 |
+| 개인화 | Notion | 문서·데이터베이스·일정 화면을 자신에게 맞게 구성 |
+| 게이미피케이션 | Habitica · gogh · Cram & Conquer | 아바타·공간·퀘스트·보상으로 목표 수행에 재미를 부여 |
+
+이 비교에서 몽글마을이 찾은 기회는 **자기관리 기능의 실용성과 캐릭터에 대한 개인적인 애착을 함께 강화하는 것**이었습니다. 게임형 보상에 더해, 사용자가 이미 아끼는 인형을 주민으로 만들면 서비스 밖의 애착을 일상 관리 경험으로 이어올 수 있다고 보았습니다. 비교 기준은 [시장조사 출처 기록](docs/MARKET_RESEARCH.md), 애착 인형과 성인 캐릭터 소비에 대한 기획 배경은 [프로젝트 기획서 1.4절·3절](https://drive.google.com/file/d/1AT0YGK2BfbWJpBcsvgHfugAlRHEdQTak/view)에 정리되어 있습니다.
+
+### 5. 생산성 앱과 성인 키덜트 시장 사이에 자리 잡기
+
+몽글마을은 **생산성 앱의 자기관리 수요**와 **성인 키덜트 시장의 캐릭터·애착 사물 소비**가 만나는 틈새를 겨냥했습니다. 포지셔닝의 두 축은 ‘자기관리 기능’과 ‘정서적 연결’이며, 두 요소를 함께 강화하는 것이 목표입니다.
+
+![자기관리와 정서적 연결을 두 축으로 삼은 기획 당시 정성적 포지셔닝: 몽글마을은 두 요소가 모두 강한 영역을 목표로 함](docs/images/market-positioning.svg)
+
+*발표 자료의 상대적 배치를 재구성한 기획 포지셔닝입니다. 좌표는 측정 점수가 아니며, 몽글마을의 위치는 달성한 성과가 아닌 제품이 지향하는 위치입니다.*
+
+이를 제품에 옮긴 것이 **자연어 목표 → TODO·일정 관리 → 주민 퀘스트 → 완료 보상·주민 피드**입니다. 계획과 기록은 자기관리의 기반을 만들고, 나의 애착 인형으로 만든 주민과 그 주민의 활동 기록은 정서적 연결을 쌓도록 설계했습니다. 몽글마을은 이 둘을 결합해 **할 일을 끝내는 경험이, 내일도 다시 찾아올 이유로 이어지는 자기관리 서비스**를 만들고자 합니다. 실제 효과는 TODO 완료율, 1·7·30일 재방문율, 회고 참여율 등으로 검증할 과제입니다.
+
+화면 구성은 [화면 설계서](https://drive.google.com/file/d/1YtJOZGWTRox2bAD4ejiBRfHChII9syMF/view), 사용 장면은 [시나리오 설계서](https://drive.google.com/file/d/1iEBtXu_PdO8v77O-_BnPvVMfbw2PgwJB/view), 기획과 현재 코드의 차이는 [설계·구현 대조 기록](docs/CROSS_REPOSITORY_REVIEW.md)에서 확인할 수 있습니다.
+
+<details>
+<summary>추가 리서치와 저장소별 설계 반영</summary>
+
+기존 기획에서 참고한 시작의 부담과 루틴 앱 수요도 함께 반영했습니다. 아래 수치는 서로 다른 외부 조사에서 인용했으며, 출처 목록은 [프로젝트 기획서](https://drive.google.com/file/d/1AT0YGK2BfbWJpBcsvgHfugAlRHEdQTak/view)에서 확인할 수 있습니다.
 
 | 관찰한 문제 | 조사 결과 | Web 경험에 반영한 방식 |
 | --- | --- | --- |
 | 시작 자체가 어렵다 | 귀찮음 **25.8%**, 무엇을 할지 모름 **24.4%**, 시간 부족 **21.7%** | 한 문장 입력과 대화형 플래너로 계획 시작 단계를 단축 |
 | 생산성 앱을 오래 쓰기 어렵다 | 생산성 앱 리텐션: 1일 **32.86% → 30일 9.63%** | TODO를 캐릭터 퀘스트·보상·피드로 시각화 |
 | 루틴을 돕는 디지털 수요가 있다 | 챌린지·습관 앱 이용 **21.3%** | 캘린더·포모도로·회고를 하나의 마을 경험으로 연결 |
+
+</details>
+
+## 문서 기준과 변경 이력
+
+README는 2026-10-10에 확인한 코드와 환경 변수 예시, Compose, CI 설정을 기준으로 작성했습니다. 코드 링크는 당시 커밋을 가리킵니다. Drive 설계 자료와 달라진 부분, 확인이 필요한 항목과 검증 내역은 [교차검증 기록](docs/CROSS_REPOSITORY_REVIEW.md)에서 확인할 수 있습니다.
 
 ## 관련 설계 문서
 
@@ -53,23 +105,89 @@
 
 [전체 프로젝트 산출물 보기](https://drive.google.com/drive/folders/1Lfv49TDbilo4ivoSIpw4v8RDEnEw9quC)
 
+## 시스템 구조
+
+Web은 Django API를 호출해 화면에 결과를 표시하고 작업 상태를 복구합니다. Django가 사용자 데이터를 저장하고 AI 서비스에 생성을 요청합니다.
+
+```mermaid
+flowchart TB
+    WEB["Web<br/>React · Phaser"]
+    SERVER["Server<br/>Django · Celery"]
+    AI["AI<br/>FastAPI · 추론"]
+    DB["관계형 데이터<br/>MySQL"]
+    MEDIA["이미지 객체<br/>S3"]
+
+    WEB -->|제품 API| SERVER
+    SERVER -->|내부 AI API| AI
+    SERVER -->|도메인 저장| DB
+    AI -->|생성 이미지 업로드| MEDIA
+```
+
+Web의 AI 기능 요청은 Django를 거쳐 FastAPI로 전달됩니다. 원본 사진은 Django가 발급한 presigned URL로 Web이 S3에 직접 PUT하며, Django는 이미지 키·메타데이터와 캐릭터 생성 감사 JSON을 관리합니다. AI가 결과를 HTTP 응답/폴링 결과로 반환하면 Django가 도메인 DB에 반영합니다. S3는 Web 정적 파일 배포와 사용자 미디어 저장에 각각 사용합니다.
+
+Redis는 Server의 Celery broker/result 및 인증 캐시이고, AI job·플래너 대화는 별도 메모리 상태입니다. 제품 DB는 MySQL을 사용하도록 구성되어 있고, Django 기본 설정에서는 `DATABASE_URL`을 지정하지 않으면 SQLite를 사용합니다. [설정 근거](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/config/settings/base.py).
+
+관련 코드: [src/shared/api/client.ts](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/shared/api/client.ts) · [src/features/character/api.ts](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/features/character/api.ts) · [apps/characters/tasks.py](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/apps/characters/tasks.py) · [infrastructure/storage/s3.py](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/infrastructure/storage/s3.py) · [api/deps.py](https://github.com/bigmooon/mongle-ai/blob/8f897687560a6ebf179e3a0894a3bfd05b778efc/api/deps.py)
+
 ## 주요 사용자 경험
 
 ```mermaid
 flowchart TB
-    ONBOARD["온보딩<br/>로그인 → AI 주민 생성"]
-    PLAN["계획과 실행<br/>목표 → TODO·캘린더 → 퀘스트"]
-    REFLECT["보상과 회고<br/>AI 피드 → 포모도로 → 일일 회고"]
-
-    ONBOARD --> PLAN --> REFLECT
+    JOIN["로그인 · 주민 입주"]
+    PLAN["목표 구체화 · TODO 확정"]
+    DO["퀘스트 연결<br/>완료 보상"]
+    REVIEW["개인 피드 · 댓글 · 회고"]
+    JOIN --> PLAN --> DO --> REVIEW
 ```
 
-1. 이메일 또는 카카오 계정으로 로그인합니다.
-2. 애착 인형 사진과 키워드로 AI 주민을 생성합니다.
-3. 한 문장 목표를 바로 TODO로 나누거나, AI 플래너와 대화해 장기 계획을 구체화합니다.
-4. TODO를 캘린더와 태그로 관리하고 캐릭터 퀘스트로 연결합니다.
-5. 완료한 퀘스트는 AI 이미지와 캡션이 포함된 피드로 이어집니다.
-6. 포모도로와 일일 회고로 실행 과정을 기록합니다.
+포모도로는 실행 중 독립적으로 사용하는 로컬 타이머입니다. 피드 생성 완료를 기다려야 포모도로·회고를 사용할 수 있는 순차 의존 관계는 없습니다. 아래 Server 경로의 공통 prefix는 `/api/v1`입니다.
+
+| 단계 | Web 담당 | Server API·저장 | AI·경계 및 근거 |
+| --- | --- | --- | --- |
+| 로그인·세션 복구 | `auth/store.ts`, `auth/api.ts`, `shared/api/client.ts` | `POST /auth/login`, `/auth/token/refresh`; `GET /auth/me/`; Kakao 교환·가입 보완 | AI 미호출<br/>[src/features/auth/store.ts](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/features/auth/store.ts) · [apps/users/urls.py](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/apps/users/urls.py) · [apps/users/refresh_token_service.py](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/apps/users/refresh_token_service.py) |
+| 사진·AI 주민 생성 | `character/api.ts`, `pendingJob.ts`, `App.tsx` | 원본 presign → S3 PUT → 생성 job 제출·조회 → `POST /characters/` 입주 | `/v1/character` → persona·이미지·외형 결과<br/>[src/features/character/api.ts](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/features/character/api.ts) · [apps/characters/views.py](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/apps/characters/views.py) · [api/character_creation/router.py](https://github.com/bigmooon/mongle-ai/blob/8f897687560a6ebf179e3a0894a3bfd05b778efc/api/character_creation/router.py) |
+| 자연어 목표·계획 구체화 | `todo/todoApi.ts`, `planner-chat/plannerApi.ts` | `/todos/generate/`, `/todos/chat/` 및 job 조회 | 단일 분해 또는 후속 질문·계획 후보. 생성만으로 DB에 저장하지 않음<br/>[src/features/planner-chat/plannerApi.ts](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/features/planner-chat/plannerApi.ts) · [apps/todos/ai_client.py](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/apps/todos/ai_client.py) · [agents/todo_creation/planner/pipeline.py](https://github.com/bigmooon/mongle-ai/blob/8f897687560a6ebf179e3a0894a3bfd05b778efc/agents/todo_creation/planner/pipeline.py) |
+| TODO·캘린더·태그 저장 | TODO 확정, 플래너 확정, `calendar/CalendarModal.tsx` | `/todos/confirm/`, `/todos/planner-confirm/`, `/todos/`, `/schedules/`, `/calendar/`, `/tags/` | 계획 확정은 Django가 오늘 후보를 Todo, 다른 날짜 후보를 Schedule로 저장; AI `/commit`은 이 제품 경로에서 호출하지 않음<br/>[apps/todos/views.py](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/apps/todos/views.py) · [apps/todos/schedule_urls.py](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/apps/todos/schedule_urls.py) · [src/features/calendar/CalendarModal.tsx](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/features/calendar/CalendarModal.tsx) |
+| 캐릭터 퀘스트 배정 | `previewTodoQuests`, TODO·플래너 확정 UI | `/todos/quest-preview/` 또는 확정 중 `_assign_quests_to_todos` | `/v1/quest/generate`; TODO **ID**와 캐릭터 정보로 매핑. TODO 내용은 LLM에 전달하지 않음<br/>[apps/todos/views.py](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/apps/todos/views.py) · [agents/quest_generation/pipeline.py](https://github.com/bigmooon/mongle-ai/blob/8f897687560a6ebf179e3a0894a3bfd05b778efc/agents/quest_generation/pipeline.py) |
+| 완료·보상 | `completeTodo`, App/캘린더 상태 갱신 | `PATCH /todos/{id}/complete/` → Todo·Quest 완료, 잔액·거래 기록 → DB commit 후 피드 예약 | 피드 생성은 완료 응답과 분리<br/>[src/features/todo/todoApi.ts](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/features/todo/todoApi.ts) · [apps/todos/views.py](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/apps/todos/views.py) |
+| AI 이미지·캡션 | 생성된 피드·알림을 조회 | Celery `generate_feed_post` → AI 호출 → Post 저장·알림 생성 | `/v1/feed/generate`: 장면 프롬프트 → 이미지 → S3 → 캡션 → 결과<br/>[apps/posts/tasks.py](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/apps/posts/tasks.py) · [agents/feed_generation/pipeline.py](https://github.com/bigmooon/mongle-ai/blob/8f897687560a6ebf179e3a0894a3bfd05b778efc/agents/feed_generation/pipeline.py) |
+| 피드·댓글·답글 | `feed/api.ts`, `FeedModal.tsx`, `PostScreen.tsx` | `/posts/`, `/posts/{id}/comments/`, `/posts/{id}/like/`; 댓글 commit 후 600초 지연 예약 | `/v1/reply/generate` → Reply 저장. 자기 캐릭터의 개인 피드<br/>[src/features/feed/api.ts](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/features/feed/api.ts) · [apps/posts/views.py](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/apps/posts/views.py) · [apps/posts/tasks.py](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/apps/posts/tasks.py) |
+| 포모도로 | `pomodoro/PomodoroHud.tsx`: 25분/5분, 종료 시 다음 모드에서 정지 | 서버 API·집중 이력 DB 저장 없음 | AI 미호출; `localStorage`의 종료 시각으로 복원<br/>[src/features/pomodoro/PomodoroHud.tsx](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/features/pomodoro/PomodoroHud.tsx) |
+| 회고 | `reflection/api.ts`: 당일 문맥·과거 회고 조회, 작성·수정 | `/reflections/context/{date}/`, `/reflections/`, `/{id}/`; Reflection·보상 거래 저장 | AI 미호출<br/>[src/features/reflection/api.ts](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/features/reflection/api.ts) · [apps/todos/reflection_views.py](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/apps/todos/reflection_views.py) |
+
+### 작업별 통신 방식
+
+| 작업 | Web → Django | Django → AI | 실행·상태 책임 |
+| --- | --- | --- | --- |
+| 캐릭터 | `POST /characters/generation-jobs/` → 202; `GET /characters/generation-jobs/{id}/` | Celery가 `POST /v1/character` → 202 후 `GET /v1/character/{id}` 폴링 | Django `CharacterGenerationJob` DB 상태 + AI 메모리 job. 성공 후 사용자의 `POST /characters/`로 입주 |
+| 단일 TODO 후보 | `POST /todos/generate/`의 최종 응답 대기 | Django 요청 안에서 `POST /v1/todo/generate` 및 `GET /v1/todo/generate/{id}` | Celery 없음. Web에 job ID를 노출하는 방식이 아님 |
+| 멀티턴 플래너 | `POST /todos/chat/` → 202; `GET /todos/chat/{id}/` 폴링 | Django가 `/v1/todo/chat` 제출·조회 중계 | AI 메모리 job·플래너 체크포인트. Django DB job 없음 |
+| 퀘스트 | 미리보기·확정 API의 최종 응답 대기 | Django 요청 안에서 `/v1/quest/generate` 제출·조회 | Celery 없음. 결과의 유효한 매핑을 Django가 저장 |
+| 피드·답글 | TODO 완료·댓글 등록 후 게시물 재조회 | Celery가 `POST /v1/feed/generate`, `/v1/reply/generate` 결과 대기 | Web 관점 백그라운드, AI API 관점 단일 요청/응답. 별도 feed job 조회 API 없음 |
+
+Web → Django 경로에는 `/api/v1`을 앞에 붙입니다. 캐릭터의 Server job ID와 AI job ID는 서로 다르며, 플래너는 AI job ID를 중계합니다. **Submit/Poll이 곧 Celery 사용이나 영속 복구를 뜻하지는 않습니다.**
+
+관련 코드: [apps/todos/views.py](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/apps/todos/views.py) · [apps/todos/ai_client.py](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/apps/todos/ai_client.py) · [apps/characters/tasks.py](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/apps/characters/tasks.py) · [apps/posts/tasks.py](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/apps/posts/tasks.py) · [api/todo_creation/router.py](https://github.com/bigmooon/mongle-ai/blob/8f897687560a6ebf179e3a0894a3bfd05b778efc/api/todo_creation/router.py) · [api/quest_generation/router.py](https://github.com/bigmooon/mongle-ai/blob/8f897687560a6ebf179e3a0894a3bfd05b778efc/api/quest_generation/router.py)
+
+### 화면·상태와 복구 범위
+
+`main.tsx`가 `ErrorBoundary → MobileGate → RouteGate → App`을 조립합니다. React Router 기반의 화면별 라우팅이 아니라 `App.tsx`의 HUD·모달 상태와 `featureRegistry.ts`로 기능을 엽니다. `RouteGate`는 루트·index·Kakao 콜백 등 허용 경로를 검사하며, Phaser는 마을 캔버스를 담당합니다. 인증·알림은 Zustand, 모달·후보·플래너 대화는 컴포넌트 상태를 사용합니다.
+
+관련 코드: [src/main.tsx](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/main.tsx) · [src/app/routeMatch.ts](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/app/routeMatch.ts) · [src/app/App.tsx](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/app/App.tsx) · [src/app/featureRegistry.ts](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/app/featureRegistry.ts) · [src/features/notification/store.ts](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/features/notification/store.ts)
+
+| 상태 | 저장·복구 방식 | 실패 시 동작과 한계 |
+| --- | --- | --- |
+| 로그인 | Access JWT는 Zustand와 `sessionStorage`; 재진입 시 `/auth/me/` 또는 Refresh 쿠키로 복구 | 401 요청은 공유 Refresh promise 후 한 번 재전송. 선제 갱신은 만료 60초 전·탭 복귀·online에서 시도하며 일시 실패 시 30초 후 재시도. 초기 복구 실패나 401 interceptor 갱신 실패는 세션 초기화 가능 |
+| 캐릭터 생성 | `localStorage`에 job ID·이름·persona 저장, 재진입 시 같은 job의 미리보기 복원 | 2초 간격, 6분 제한, 조회당 15초 제한. 네트워크/5xx는 연속 3회 오류까지 처리. 타임아웃·관찰 중단은 pending 유지; FAILED·CONSUMED·복구 조회 404는 정리 |
+| 캐릭터 입주·취소 | SUCCEEDED는 미리보기이며 사용자가 입주를 눌러야 등록 | 관찰 중단은 서버 취소와 다름. 취소 API는 결과 폐기·횟수 환불용이며 이미 실행된 원격 GPU 작업 중단을 보장하지 않음 |
+| 플래너 | React 상태의 대화·thread ID; 작업 폴링은 2초 간격·10분 제한 | 캐릭터와 같은 pending 영속 복구 없음. AI 재시작 시 job·대화 체크포인트도 유실 |
+| 포모도로 | `pomodoro_hud` 로컬 저장과 `endAt`으로 남은 시간 복원 | 로그인 조건에 따라 재개, 로그아웃 시 초기화. 서버에 집중 기록을 보내지 않음 |
+
+관련 코드: [src/features/auth/store.ts](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/features/auth/store.ts) · [src/shared/api/client.ts](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/shared/api/client.ts) · [src/features/character/api.ts](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/features/character/api.ts) · [src/features/character/pendingJob.ts](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/features/character/pendingJob.ts) · [src/features/planner-chat/plannerChat.tsx](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/features/planner-chat/plannerChat.tsx) · [src/features/planner-chat/plannerApi.ts](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/features/planner-chat/plannerApi.ts) · [src/features/pomodoro/PomodoroHud.tsx](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/features/pomodoro/PomodoroHud.tsx)
+
+피드는 서버에서 받은 개인 게시물 배열을 클라이언트에서 나눠 보여줍니다. 설계서의 서버 페이지네이션·전체 사용자 좋아요 집계와 동일한 구현으로 설명하지 않습니다. 공유는 Kakao SDK 또는 브라우저 공유 기능·링크 복사로 처리하며, Instagram Stories 전용 게시 API는 구현되어 있지 않습니다.
+
+관련 코드: [src/features/feed/FeedModal.tsx](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/features/feed/FeedModal.tsx) · [src/features/feed/share.ts](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/src/features/feed/share.ts) · [apps/posts/views.py](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/apps/posts/views.py) · [apps/posts/models.py](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/apps/posts/models.py)
 
 ## 담당한 부분
 
@@ -90,12 +208,12 @@ flowchart TB
 | 정보 UI와 게임형 공간을 함께 표현 | React UI + Phaser Canvas | 폼·모달의 생산성과 픽셀 마을 렌더링을 동시에 확보하기 위해 |
 | 기능 증가에 따른 결합도 | `features/` 중심 구조 | 인증·캘린더·피드 등 도메인 변경 범위를 제한하기 위해 |
 | AI 생성 중 새로고침·지연 | Submit/Poll + pending job 복구 | 장시간 요청의 타임아웃과 작업 유실을 줄이기 위해 |
-| Refresh 쿠키의 브라우저 정책 | same-origin API + Vite proxy | 개발 환경에서도 실제 쿠키 조건과 가깝게 동작시키기 위해 |
+| Refresh 쿠키의 브라우저 정책 | same-origin API + Vite proxy | 개발 시 쿠키 전달을 단순화하기 위해. 운영 API 호스트는 `VITE_API_BASE`에 따라 달라짐 |
 | 피드의 낙관적 상호작용 | 서버 응답과 로컬 상태 동기화 | 좋아요·댓글 수가 화면마다 달라지는 문제를 줄이기 위해 |
 
 ## 검증 결과
 
-2026-10-10 로컬 환경에서 다음 항목을 확인했습니다.
+2026-10-10에 기록한 로컬 검증 결과입니다. 이번 README 수정에서는 애플리케이션 테스트를 다시 실행하지 않았습니다.
 
 | 검증 | 결과 |
 | --- | --- |
@@ -121,7 +239,7 @@ npm ci
 npm run dev
 ```
 
-브라우저에서 `http://127.0.0.1:5173`을 엽니다. `VITE_API_BASE`를 비워 두면 `/api` 요청은 개발 프록시를 통해 `http://127.0.0.1:8000`으로 전달됩니다.
+브라우저에서 `http://127.0.0.1:5173`을 엽니다. `VITE_API_BASE`를 비워 두면 `/api` 요청은 개발 프록시를 통해 `http://localhost:8000`으로 전달됩니다. (근거: [`vite.config.ts`](vite.config.ts))
 
 ### 환경 변수
 
@@ -162,7 +280,18 @@ src/
 
 ## 배포
 
-`main`의 Web 코드가 변경되면 GitHub Actions가 앱을 빌드해 S3에 동기화하고 CloudFront 캐시를 무효화합니다. AWS 인증은 장기 키 대신 GitHub OIDC 역할을 사용합니다.
+| 서비스 | 저장소에 정의된 배포·통신 경로 |
+| --- | --- |
+| Web | Node 빌드 → S3 정적 배포 → CloudFront invalidation. 개발은 Vite `/api` proxy → `localhost:8000`; 배포는 빌드 시 `VITE_API_BASE` 주입 |
+| Server | 테스트 → Docker Hub → AWS OIDC·SSM → EC2 Compose. Nginx TLS → `web:8000` Gunicorn → Django. DB 주소는 `DATABASE_URL`, AI 주소는 아래 두 설정군 사용 |
+| AI API | 테스트 → Docker Hub → RunPod CPU Pod 재시작 → `8010/health` 확인. Compose의 단독 API 실행과 GPU 워커는 별도 구성 |
+| 추론 워커 | LLM·플래너·이미지 Docker 이미지 빌드. `v*` 태그 workflow에서 RunPod 템플릿 갱신. FastAPI가 RunPod endpoint를 호출하고 결과를 수집 |
+
+Server의 TODO·퀘스트는 `MONGLE_AI_API_BASE`/`MONGLE_AI_API_KEY`, 캐릭터·피드·답글은 `AI_SERVICE_URL`/`AI_SERVICE_TOKEN`을 사용합니다. 두 키는 연결할 AI의 `MONGLE_API_KEY`와 맞춰야 합니다. 컨테이너에서 호스트 AI에 연결할 때 loopback 대신 도달 가능한 호스트 주소를 설정해야 합니다.
+
+배포 경로는 저장소의 Compose와 CI 설정을 기준으로 정리했습니다. 실제 DNS, CloudFront origin, RDS 엔진 버전, RunPod에서 사용 중인 모델과 비밀 환경 변수는 운영 환경에서 별도로 확인해야 합니다. Nginx 대기 제한(120초), Server AI 폴링 기본 예산(150초), Gunicorn 제한(180초)이 달라 동기 대기 경로의 타임아웃 위험도 남아 있습니다.
+
+관련 코드: [.github/workflows/deploy-web.yml](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/.github/workflows/deploy-web.yml) · [vite.config.ts](https://github.com/bigmooon/mongle-web/blob/fcd2734b386035fca2d10980a1bb55ec8e90c4ba/vite.config.ts) · [.github/workflows/deploy-server.yml](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/.github/workflows/deploy-server.yml) · [nginx/api.conf](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/nginx/api.conf) · [Dockerfile](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/Dockerfile) · [.env.example](https://github.com/bigmooon/mongle-server/blob/11f428734960dab8db60bc5bc7128fb62e8a495d/.env.example) · [.github/workflows/deploy-api.yml](https://github.com/bigmooon/mongle-ai/blob/8f897687560a6ebf179e3a0894a3bfd05b778efc/.github/workflows/deploy-api.yml) · [.github/workflows/deploy-workers.yml](https://github.com/bigmooon/mongle-ai/blob/8f897687560a6ebf179e3a0894a3bfd05b778efc/.github/workflows/deploy-workers.yml) · [docker-compose.yml](https://github.com/bigmooon/mongle-ai/blob/8f897687560a6ebf179e3a0894a3bfd05b778efc/docker-compose.yml)
 
 ## 한계와 다음 과제
 
